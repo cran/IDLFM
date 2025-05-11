@@ -79,11 +79,8 @@ R <- 3
 k <- 3
 N <- 300
 idx_x <- randomSparseArray(c(I, J, time), density=0.8)
-idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
 idx_y_train <- randomSparseArray(c(I, 1, time), density=0.2)
-idx_y_train <- array(runif(length(idx_y_train), 0, 1), dim = dim(idx_y_train))
 idx_y_test <- randomSparseArray(c(I, 1, time), density=0.2)
-idx_y_test <- array(runif(length(idx_y_test), 0, 1), dim = dim(idx_y_test))
 data <- generate_data(I, J, time, idx_x, idx_y_train, R, k, N)
 output_x <- data[[1]]
 output_y <- data[[2]]

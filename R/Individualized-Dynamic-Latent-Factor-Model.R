@@ -15,7 +15,8 @@
 #' @export
 #' @importFrom stats rnorm
 #' @importFrom splines splineDesign
-#' @importFrom SparseArray COO_SparseArray SVT_SparseArray randomSparseArray nzcoo nzdata
+#' @importFrom SparseArray nzdata nzcoo nzvals nzwhich
+#' @importFrom SparseArray COO_SparseArray SVT_SparseArray nzcoo nzdata nzvals nzwhich nzcount
 #' @importFrom methods as
 #' @references Zhang, J., F. Xue, Q. Xu, J. Lee, and A. Qu. "Individualized dynamic latent factor model for multi-resolutional data with application to mobile health." Biometrika (2024): asae015.
 #' @examples
@@ -32,60 +33,61 @@
 #' k <- 3
 #' N <- 300
 #' idx_x <- randomSparseArray(c(I, J, time), density=0.8)
-#' idx_y <- randomSparseArray(c(I, 1, time), density=0.2)
-#' idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
-#' idx_y <- array(runif(length(idx_y), 0, 1), dim = dim(idx_y))
-#' generate_data(I, J, time, idx_x, idx_y, R, k, N)
+#' idx_y_train <- randomSparseArray(c(I, 1, time), density=0.2)
+#' idx_y_test <- randomSparseArray(c(I, 1, time), density=0.2)
+#' generate_data(I, J, time, idx_x, idx_y_train, R, k, N)
 generate_data <- function(n_patients, n_var, time, idx_x, idx_y, rank, k, N) {
   D <- N - k
-  Fx <- matrix(rnorm(n_var * rank), nrow = n_var, ncol = rank)
+  Fx <- matrix(rnorm(n_var * rank), nrow = n_var, ncol = rank)# F_i
   Fy <- rnorm(rank)
 
   knots <- seq(1, N - 2 * k - 1) / (N - 2 * k - 1) * time
-  knots <- c(rep(-1, k + 1), knots, rep(T + 1, k + 1))
-
+  knots <- c(rep(-1, k + 1), knots, rep(time + 1, k + 1))
   weights <- array(rnorm(n_patients * rank * D), dim = c(n_patients, rank, D))
 
-  x_data <- numeric(0)
-  y_data <- numeric(0)
-  # Setting 2.3
-  spl <- list(
-    function(t, i) 0.02 * i * log(t + 1),
-    function(t, i) 2 * exp(-(t - 60 + 10 * i) / 50 * (t - 60 + 10 * i)) + 4 * exp(-(t - 70 + 10 * i) / 20 * (t - 70 + 10 * i)),
-    function(t, i) cos(0.12 * pi * t) + 1
-  )
+  x_data <- c()
+  y_data <- c()
 
-  # Setting 2.2
-  # spl <- list(
-  # function(t, i) 0.2 * log(t + 1),
-  # function(t, i) 2 * exp(-(t - 60 + 10 * i) / 50 * (t - 60 + 10 * i)) + 4 * exp(-(t - 70 + 10 * i) / 20 * (t - 70 + 10 * i)),
-  # function(t, i) cos(0.12 * pi * t) + 1
-  # )
-
-  # Setting 2.1
-  # spl <- list(
-  # function(t, i) 0.2 * log(t + 1),
-  # function(t, i) 2 * exp(-(t - 60) / 50 * (t - 60)) + 4 * exp(-(t - 70) / 20 * (t - 70)),
-  # function(t, i) cos(0.12 * pi * t) + 1
-  # )
   for (i in 1:n_patients) {
+    # Setting 2.3
+    spl <- list(
+      function(t, i) 0.02 * i * log(t + 1),
+      function(t, i) 2 * exp(-(t - 60 + 10 * i) / 50 * (t - 60 + 10 * i)) + 4 * exp(-(t - 70 + 10 * i) / 20 * (t - 70 + 10 * i)),
+      function(t, i) cos(0.12 * pi * t) + 1
+    )
+
+    # Setting 2.2
+    # spl <- list(
+    # function(t, i) 0.2 * log(t + 1),
+    # function(t, i) 2 * exp(-(t - 60 + 10 * i) / 50 * (t - 60 + 10 * i)) + 4 * exp(-(t - 70 + 10 * i) / 20 * (t - 70 + 10 * i)),
+    # function(t, i) cos(0.12 * pi * t) + 1
+    # )
+
+    # Setting 2.1
+    # spl <- list(
+    # function(t, i) 0.2 * log(t + 1),
+    # function(t, i) 2 * exp(-(t - 60) / 50 * (t - 60)) + 4 * exp(-(t - 70) / 20 * (t - 70)),
+    # function(t, i) cos(0.12 * pi * t) + 1
+    # )
     for (j in 1:n_var) {
-      spline_values <- sapply(1:rank, function(r) spl[[r]](idx_x[i, j, ], i))
-      tmp <- Fx[j, ] %*% t(spline_values) + 0.5 * rnorm(length(idx_x[i, j, ]))
+      spl_values <- sapply(1:rank, function(r) spl[[r]](nzwhich(idx_x[i, j, ]), i))
+      tmp <- Fx[j, ] %*% t(spl_values) + 0.5 * rnorm(nzcount(idx_x[i, j, ]))
       x_data <- c(x_data, tmp)
     }
-
-      spline_values <- sapply(1:rank, function(r) spl[[r]](idx_y[i, 1, ], i))
-      tmp <- Fy %*% t(spline_values) + 0.5 * rnorm(length(idx_y[i, 1, ]))
-      y_data <- c(y_data, tmp)
+    spl_values_y <- sapply(1:rank, function(r) spl[[r]](nzwhich(idx_y[i, 1, ]), i))
+    tmp_y <- Fy %*% t(spl_values_y) + 0.5 * rnorm(nzcount(idx_y[i, 1, ]))
+    y_data <- c(y_data, tmp_y)
   }
-  idx_x_coords <- which(idx_x != 0, arr.ind = TRUE)
-  idx_y_coords <- which(idx_y != 0, arr.ind = TRUE)
-  output_x <- COO_SparseArray(c(n_patients, n_var, time), idx_x_coords, x_data)
-  output_y <- COO_SparseArray(c(n_patients, 1, time), idx_y_coords, y_data)
+  idx_x_coords <- nzwhich(idx_x)
+  idx_y_coords <- nzwhich(idx_y)
+  output_x <- SVT_SparseArray(dim=c(n_patients, n_var, time))
+  output_x[c(idx_x_coords)] <- x_data
+  output_y <- SVT_SparseArray(dim=c(n_patients, 1, time))
+  output_y[c(idx_y_coords)] <- y_data
 
   list(output_x, output_y, knots, weights, Fx, Fy)
 }
+
 
 #' Individualized Dynamic Latent Factor Model
 #'
@@ -110,7 +112,8 @@ generate_data <- function(n_patients, n_var, time, idx_x, idx_y, rank, k, N) {
 #' @param verbose to control the console output
 #' @return A list is returned, containing the model weights, factor matrix, spline knots, predicted X and Y.
 #' @export
-#' @importFrom SparseArray COO_SparseArray extract_sparse_array nzcoo nzdata
+#' @importFrom SparseArray nzdata nzcoo nzvals nzwhich
+#' @importFrom SparseArray COO_SparseArray SVT_SparseArray nzcoo nzdata nzvals nzwhich nzcount
 #' @references Zhang, J., F. Xue, Q. Xu, J. Lee, and A. Qu. "Individualized dynamic latent factor model for multi-resolutional data with application to mobile health." Biometrika (2024): asae015.
 #' @examples
 #' library(splines)
@@ -126,11 +129,8 @@ generate_data <- function(n_patients, n_var, time, idx_x, idx_y, rank, k, N) {
 #' k <- 3
 #' N <- 300
 #' idx_x <- randomSparseArray(c(I, J, time), density=0.8)
-#' idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
 #' idx_y_train <- randomSparseArray(c(I, 1, time), density=0.2)
-#' idx_y_train <- array(runif(length(idx_y_train), 0, 1), dim = dim(idx_y_train))
 #' idx_y_test <- randomSparseArray(c(I, 1, time), density=0.2)
-#' idx_y_test <- array(runif(length(idx_y_test), 0, 1), dim = dim(idx_y_test))
 #' data <- generate_data(I, J, time, idx_x, idx_y_train, R, k, N)
 #' output_x <- data[[1]]
 #' output_y <- data[[2]]
@@ -151,75 +151,68 @@ IDLFM <- function(X, Y, n_patients, n_var, time, idx_x, idx_y, rank, k, N, lambd
   D <- N - k - 1
   F_all <- matrix(rnorm((n_var + 1) * rank), nrow = n_var + 1, ncol = rank)
 
-  coords_Y <- nzcoo(Y)
-  coords_Y[, 2] <- n_var
-  coords_X <- nzcoo(X)
+  coords_Y <- nzwhich(Y, arr.ind=TRUE)
+  coords_Y[, 2] <- n_var + 1
+  coords_X <- nzwhich(X, arr.ind=TRUE)
   coords <- rbind(coords_X, coords_Y)
-  data <- c(nzdata(X), nzdata(Y))
-  xy <- COO_SparseArray(c(n_patients, n_var + 1, time), nzcoo = coords, nzdata = data, dimnames=NULL, check=TRUE)
+  data <- c(nzvals(X), nzvals(Y))
+
+  xy <- COO_SparseArray(c(n_patients, n_var + 1, time), nzcoo = coords, nzdata = data)
 
   knots <- seq(1, N - 2 * k - 2) / (N - 2 * k - 2) * time
   knots <- c(rep(-1, k + 1), knots, rep(time + 1, k + 1))
 
-  idx_x_coo <- COO_SparseArray(c(dim(idx_x)), nzcoo = which(idx_x != 0, arr.ind = TRUE), nzdata = idx_x[idx_x != 0])
-  idx_y_coo <- COO_SparseArray(c(dim(idx_y)), nzcoo = which(idx_y != 0, arr.ind = TRUE), nzdata = idx_y[idx_y != 0])
-  coords_idx_y <- nzcoo(idx_y_coo)
-  coords_idx_y[, 2] <- n_var
-  coords_idx_x <- nzcoo(idx_x_coo)
+  coords_idx_y <- nzwhich(idx_y, arr.ind = TRUE)
+  coords_idx_y[, 2] <- n_var + 1
+  coords_idx_x <-nzwhich(idx_x, arr.ind = TRUE)
   coords_idx <- rbind(coords_idx_x, coords_idx_y)
-  data_idx <- c(nzdata(idx_x_coo), nzdata(idx_y_coo))
+  data_idx <- c(nzvals(idx_x), nzvals(idx_y))
+
   idx <- COO_SparseArray(c(n_patients, n_var + 1, time), nzcoo = coords_idx, nzdata = data_idx)
 
   weights <- array(rnorm(n_patients * rank * D), dim = c(n_patients, rank, D))
 
   # Define xy_pred
   xy_pred <- function(weights, knots, F_all, n_patients, n_var, idx, rank, k) {
-    thetas <- vector("list", n_patients)
-    for (i in 1:n_patients) {
-      thetas[[i]] <- vector("list", rank)
-      for (r in 1:rank) {
-        thetas[[i]][[r]] <- function(x) {
-          if (length(x) > 0) {
-            spline_mat <- splineDesign(knots, x, ord = k + 1, outer.ok = TRUE)
-            weight_mat <- matrix(weights[i, r, ])
-            result <- spline_mat %*% weight_mat
-            return(result)
-          } else {
-            return(rep(0, D))
-          }
-        }
-      }
+    b_spline_basis <- function(t) {
+      splineDesign(knots, t, ord = k + 1)
     }
-    data <- numeric()
+
+    data <- c()
+
     for (i in 1:n_patients) {
       for (j in 1:(n_var + 1)) {
-        ## Calculate B-spline results for each variable for each patient
-        subset_idx <- list(i, j, TRUE)
-        subset_data <- extract_sparse_array(idx, subset_idx)
-        thetas_subset <- sapply(1:rank, function(r) {
-          thetas[[i]][[r]](subset_data)
+        idx_SVT <- as(idx, "SVT_SparseArray")
+        idx_data <- nzwhich(idx_SVT[i, j, ])
+
+        spl_values <- sapply(1:rank, function(r) {
+          basis_matrix <- b_spline_basis(idx_data)
+          theta_ir <- basis_matrix %*% weights[i, r, ]
+          return(as.numeric(theta_ir))
         })
-        tmp <- F_all[j, ] %*% thetas_subset
+
+        tmp <- F_all[j, ] %*% t(spl_values)
         data <- c(data, tmp)
       }
     }
-    idx_coords <- nzcoo(idx)
-    output <- COO_SparseArray(c(n_patients, n_var + 1, dim(idx)[3]), idx_coords, data)
+
+    output <- COO_SparseArray(c(n_patients, n_var + 1, dim(idx)[3]), nzcoo(idx), data)
+    output <- as(output, "SVT_SparseArray")
     return(output)
   }
 
   xy_hat <- xy_pred(weights, knots, F_all, n_patients, n_var, idx, rank, k)
 
   nobs <- length(data)
-  S <- sum((nzdata(xy) - nzdata(xy_hat))^2) / nobs
+  S <- sum((nzvals(xy) - nzvals(xy_hat))^2) / nobs
   S_record <- c(S)
   if(verbose){
     print(S)
   }
 
   K <- matrix(0, nrow = D, ncol = time, byrow = TRUE)
-  for (t in 1:time) {
-    xval <- t
+  for (tt in 1:time) {
+    xval <- tt
     if (xval <= knots[k]) {
       left <- k
     } else {
@@ -228,9 +221,9 @@ IDLFM <- function(X, Y, n_patients, n_var, time, idx_x, idx_y, rank, k, N, lambd
     # Fill a row
     bb <- splineDesign(knots * 1.0, xval, ord = k + 1, outer.ok = TRUE)
     if (length(bb) >= left - k + 1) {
-      K[(left - k + 1):left, t] <- bb[(left - k + 1):left]
+      K[(left - k + 1):left, tt] <- bb[(left - k + 1):left]
     } else {
-      K[(left - k + 1):left, t] <- bb
+      K[(left - k + 1):left, tt] <- bb
     }
   }
 
@@ -317,7 +310,7 @@ IDLFM <- function(X, Y, n_patients, n_var, time, idx_x, idx_y, rank, k, N, lambd
     F_all <- F_all - alpha * mhat_F / (sqrt(vhat_F) + 1e-8)
 
     xy_hat <- xy_pred(weights, knots, F_all, n_patients, n_var, idx, rank, k)
-    S <- sum((nzdata(xy) - nzdata(xy_hat))^2) / nobs
+    S <- sum((nzvals(xy) - nzvals(xy_hat))^2) / nobs
     t <- abs((S_record[length(S_record)] - S) / S_record[length(S_record)])
 
     if (itr > 10 && S >= max(S_record)) {
@@ -343,13 +336,11 @@ IDLFM <- function(X, Y, n_patients, n_var, time, idx_x, idx_y, rank, k, N, lambd
   if(verbose){
     print('Max iteration')
   }
-  index_list <- list(1:n_patients, 1:n_var, 1:dim(xy_hat)[3])
-  X_hat <- extract_sparse_array(xy_hat, index_list)
-  index_list <- list(1:n_patients, n_var, 1:dim(xy_hat)[3])
-  Y_hat <- extract_sparse_array(xy_hat, index_list)
-  Y_hat_array <- as.array(Y_hat)
-  dim(Y_hat_array) <- c(n_patients, 1, dim(xy_hat)[3])
-  Y_hat <- as(Y_hat_array, "COO_SparseArray")
+  X_hat = xy_hat[ ,1:n_var, ]
+  Y_hat = xy_hat[ ,n_var+1, ]
+  Y_hat_coords = nzwhich(Y_hat, arr.ind = TRUE)
+  new_coords_Y <- cbind(Y_hat_coords[, 1], 1, Y_hat_coords[, 2])
+  Y_hat <- COO_SparseArray(dim = c(n_patients, 1, time), nzcoo = new_coords_Y, nzdata = nzvals(Y_hat))
 
-  return(list(weights, F_all, knots, X_hat, Y_hat))
+  return(list(weights, F_all, X_hat, Y_hat))
 }

@@ -1,6 +1,6 @@
 Package: IDLFM
 Title: Individual Dynamic Latent Factor Model
-Version: 0.0.2
+Version: 1.0.0
 Authors@R: c(person(given = "Siyang",
                       family = "Liu",
                       role = c("aut", "cre"),
@@ -23,9 +23,9 @@ RoxygenNote: 7.3.2
 Suggests: testthat (>= 3.0.0)
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2024-12-05 07:42:29 UTC; 24952
+Packaged: 2025-05-11 09:37:26 UTC; 24952
 Author: Siyang Liu [aut, cre],
   Jiuchen Zhang [aut],
   Annie Qu [aut]
 Repository: CRAN
-Date/Publication: 2024-12-05 09:00:02 UTC
+Date/Publication: 2025-05-11 09:50:02 UTC

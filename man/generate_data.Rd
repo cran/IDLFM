@@ -44,10 +44,9 @@ R <- 3
 k <- 3
 N <- 300
 idx_x <- randomSparseArray(c(I, J, time), density=0.8)
-idx_y <- randomSparseArray(c(I, 1, time), density=0.2)
-idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
-idx_y <- array(runif(length(idx_y), 0, 1), dim = dim(idx_y))
-generate_data(I, J, time, idx_x, idx_y, R, k, N)
+idx_y_train <- randomSparseArray(c(I, 1, time), density=0.2)
+idx_y_test <- randomSparseArray(c(I, 1, time), density=0.2)
+generate_data(I, J, time, idx_x, idx_y_train, R, k, N)
 }
 \references{
 Zhang, J., F. Xue, Q. Xu, J. Lee, and A. Qu. "Individualized dynamic latent factor model for multi-resolutional data with application to mobile health." Biometrika (2024): asae015.

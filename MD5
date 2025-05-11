@@ -1,8 +1,8 @@
-52342bb17260b0759ee970e1ceeee85d *DESCRIPTION
+6cd13d7ddd4a1778bfae88fc6bedd8fa *DESCRIPTION
 15c67dc313042c5aa7202ae3565e7c7a *LICENSE
-130d9d1f6d738ee7712a7c815c1a30f5 *NAMESPACE
-8b1b01cdc2049899ec070fc8bd03d51a *R/Individualized-Dynamic-Latent-Factor-Model.R
-17f8846886621469a7364cc21758c73e *man/IDLFM.Rd
-11a858457145b4db6c24948fd8032db8 *man/generate_data.Rd
+aeb50cba8049c97203f185b981d2e48e *NAMESPACE
+69b29e9fb16051721d871527cb925c89 *R/Individualized-Dynamic-Latent-Factor-Model.R
+1e830daadd928f15009a978eabac5ead *man/IDLFM.Rd
+d918b2d7c81c1a401aa9cda661387327 *man/generate_data.Rd
 8fb5c89044d088258be889c5126b43b9 *tests/testthat.R
 225e3812b897786befc574f805c96dc2 *tests/testthat/test-Individualized-Dynamic-Latent-Factor-Model.R
